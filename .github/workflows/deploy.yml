@@ -1,0 +1,66 @@
+name: Deploy lovejs to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install makelove
+        run: pip install makelove
+
+      - name: Build lovejs
+        run: makelove --config make_ci.toml lovejs
+
+      - name: Unzip build
+        run: |
+          mkdir -p deploy
+          ZIP=$(find bin/lovejs -name "*.zip" | head -n1)
+          echo "Unzipping $ZIP"
+          unzip -o "$ZIP" -d deploy
+
+      - name: Find index.html dir
+        id: find
+        run: |
+          DIR=$(dirname $(find deploy -name index.html -type f | head -n1))
+          echo "Found index.html in $DIR"
+          echo "dir=$DIR" >> $GITHUB_OUTPUT
+
+      - name: Add .nojekyll
+        run: touch "${{ steps.find.outputs.dir }}/.nojekyll"
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ steps.find.outputs.dir }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,11 @@
+name = "RayTracing"
+default_targets = ["lovejs"]
+build_directory = "bin"
+love_files = [
+    "./main.lua",
+    "./conf.lua",
+    "./src/*",
+]
+
+[lovejs]
+title = "RayTracing"
